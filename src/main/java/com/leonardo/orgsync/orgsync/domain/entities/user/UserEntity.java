@@ -1,5 +1,6 @@
 package com.leonardo.orgsync.orgsync.domain.entities.user;
 
+import com.leonardo.orgsync.orgsync.domain.entities.department.Department;
 import com.leonardo.orgsync.orgsync.presentation.dtos.LoginRequest;
 import jakarta.persistence.*;
 import lombok.*;
@@ -39,6 +40,10 @@ public class UserEntity {
 
     @Column(nullable = false)
     private boolean enabled;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id", nullable = false)
+    private Department department;
 
 
     public boolean isCorretLogin(LoginRequest loginRequest, PasswordEncoder passwordEncoder) {
