@@ -6,5 +6,7 @@ CREATE TABLE tb_departments (
 );
 
 INSERT INTO tb_departments (id, name, description, enabled)
-VALUES (1, 'Administrativo', 'Departamento responsável pela administração geral', true)
+VALUES
+    (1, 'Administrativo', 'Departamento responsável pela administração geral', TRUE),
+    (2, 'Sem Departamento', 'Usuários que ainda não pertencem a um departamento específico', TRUE)
     ON CONFLICT (id) DO NOTHING;

@@ -4,6 +4,6 @@ CREATE TABLE tb_users (
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
   enabled BOOLEAN NOT NULL,
-  department_id BIGINT NOT NULL,
+  department_id BIGINT NOT NULL DEFAULT 2,
   CONSTRAINT fk_department FOREIGN KEY (department_id) REFERENCES tb_departments(id) ON DELETE CASCADE
 );
