@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -56,5 +57,18 @@ public class UserService {
                         this::createResponse
                 ).collect(Collectors.toList());
     return users;
+    }
+
+    public void deleteUser(UUID userId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.getRoles().clear();
+        userRepository.save(user);
+
+        user.setDepartment(null);
+        userRepository.save(user);
+
+        userRepository.delete(user);
     }
 }

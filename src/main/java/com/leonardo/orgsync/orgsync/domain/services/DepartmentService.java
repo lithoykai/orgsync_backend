@@ -6,7 +6,9 @@ import com.leonardo.orgsync.orgsync.domain.repositories.DepartmentRepository;
 import com.leonardo.orgsync.orgsync.domain.repositories.UserRepository;
 import com.leonardo.orgsync.orgsync.presentation.dtos.department.DepartmentRequest;
 import com.leonardo.orgsync.orgsync.presentation.dtos.department.DepartmentResponse;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
+
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,8 +34,9 @@ public class DepartmentService {
         );
     }
 
-    public Optional<Department> findById(Long id) {
+    public Optional<Department> findById(Long id) throws EntityNotFoundException {
         Optional<Department> department = repository.findById(id);
+        if(department.isEmpty()) throw new EntityNotFoundException("Department not found");
         return department;
     }
     public void createDepartment(DepartmentRequest request){
@@ -54,14 +57,31 @@ public class DepartmentService {
         return createResponse(Objects.requireNonNull(repository.findById(id).orElse(null)));
     }
 
+    public DepartmentResponse updateDepartment(DepartmentRequest request, Long id){
+        Department department = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Department not found"));
+
+        department.setName(request.name());
+        department.setDescription(request.description());
+        department.setEnabled(request.enabled());
+
+        repository.save(department);
+        return new DepartmentResponse(
+                department.getId(),
+                department.getName(),
+                department.getDescription(),
+                department.getUsers()
+        );
+    }
+
     public DepartmentResponse addUsers(Long departmentId, Set<UUID> userIds) {
         Department department = repository.findById(departmentId).orElse(null);
 
-        if (department == null) throw new RuntimeException("Department not found");
+        if (department == null) throw new EntityNotFoundException("Department not found");
 
         Set<UserEntity> users = userRepository.findAllById(userIds).stream().collect(Collectors.toSet());
 
-        if (users.isEmpty()) throw new RuntimeException("Users not found");
+        if (users.isEmpty()) throw new EntityNotFoundException("Users not found");
 
         department.getUsers().addAll(users);
 
@@ -72,4 +92,7 @@ public class DepartmentService {
         return createResponse(department);
     }
 
+    public void deleteDepartment(Long id){
+        repository.deleteById(id);
+    }
 }

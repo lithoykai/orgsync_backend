@@ -17,6 +17,25 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app_network
+    healthcheck:
+          test: [ "CMD-SHELL", "pg_isready -U admin -d orgsync_db" ]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+
+  spring-app:
+    build: .
+    container_name: spring-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DEFAULT_EMAIL: "admin@admin.com"
+      DEFAULT_PASSWORD: "admin"
+    networks:
+      - app_network
 
 volumes:
   postgres_data:

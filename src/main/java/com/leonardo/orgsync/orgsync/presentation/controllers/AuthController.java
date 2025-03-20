@@ -3,51 +3,62 @@ package com.leonardo.orgsync.orgsync.presentation.controllers;
 import com.leonardo.orgsync.orgsync.domain.entities.user.UserEntity;
 import com.leonardo.orgsync.orgsync.domain.entities.user.UserRole;
 import com.leonardo.orgsync.orgsync.domain.repositories.RoleRepository;
+import com.leonardo.orgsync.orgsync.domain.services.DepartmentService;
 import com.leonardo.orgsync.orgsync.domain.services.UserService;
-import com.leonardo.orgsync.orgsync.presentation.dtos.LoginRequest;
-import com.leonardo.orgsync.orgsync.presentation.dtos.LoginResponse;
-import com.leonardo.orgsync.orgsync.presentation.dtos.RegisterDTO;
-import com.leonardo.orgsync.orgsync.presentation.dtos.UserResponse;
+import com.leonardo.orgsync.orgsync.presentation.dtos.auth.LoginRequest;
+import com.leonardo.orgsync.orgsync.presentation.dtos.auth.LoginResponse;
+import com.leonardo.orgsync.orgsync.presentation.dtos.auth.RegisterDTO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/auth")
+@Tag(name = "Rota de Autênticação", description = "Rota utilizada para realizar a autênticação no sistema.")
 public class AuthController {
 
     private final JwtEncoder jwtEncoder;
     private final UserService service;
     private final BCryptPasswordEncoder encoder;
     private final RoleRepository roleRepository;
+    private final DepartmentService departmentService;
 
-    public AuthController(JwtEncoder jwtEncoder, UserService service, BCryptPasswordEncoder encoder, RoleRepository roleRepository) {
+    public AuthController(JwtEncoder jwtEncoder, UserService service, BCryptPasswordEncoder encoder, RoleRepository roleRepository, DepartmentService departmentService) {
         this.jwtEncoder = jwtEncoder;
         this.service = service;
         this.encoder = encoder;
         this.roleRepository = roleRepository;
+        this.departmentService = departmentService;
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Login do usuário", description = "Autentica um usuário e retorna um token JWT válido para acesso ao sistema.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login bem-sucedido", content = @Content(schema = @Schema(implementation = LoginResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Credenciais inválidas", content = @Content)
+    })
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) throws Exception {
         //TODO: service, not repository
         var user = service.findUserByEmail(loginRequest.email());
 
         if(user.isEmpty() || !user.get().isCorretLogin(loginRequest, encoder)) throw new BadCredentialsException("User or password is invalid");
         var now = Instant.now();
-        var expiresIn = 300L;
+        var expiresIn = 7200L; //2hours
 
         var scopes = user.get().getRoles().stream().map(UserRole::getName).collect(Collectors.joining(" "));
 
@@ -65,11 +76,14 @@ public class AuthController {
     }
 
     @PostMapping("/register")
+    @Operation(summary = "Registrar um novo usuário", description = "Cria um novo usuário no sistema e o associa ao departamento padrão 'Sem Departamento'.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Usuário registrado com sucesso", content = @Content),
+            @ApiResponse(responseCode = "422", description = "Usuário já existe", content = @Content)
+    })
     public ResponseEntity register(@RequestBody RegisterDTO userDTO) throws Exception {
         var basicRole = roleRepository.findByName(UserRole.Values.USER.name());
-
-        var userDB = service.findUserByEmail(userDTO.email());
-        if(userDB.isPresent()) throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "User already exists");
+        var department = departmentService.findById(2L);
 
         var user = new UserEntity();
         user.setEmail(userDTO.email());
@@ -77,17 +91,10 @@ public class AuthController {
         user.setName(userDTO.name());
         user.setEnabled(true);
         user.setRoles(Set.of(basicRole));
+        user.setDepartment(department.orElse(null));
 
         service.saveUser(user);
         return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-
-
-    @GetMapping("/users")
-    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
-    public ResponseEntity<List<UserResponse>> listUsers() {
-        var users = service.getAllUsers();
-        return ResponseEntity.ok(users);
     }
 
 }
