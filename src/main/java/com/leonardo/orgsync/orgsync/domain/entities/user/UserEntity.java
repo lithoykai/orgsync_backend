@@ -1,7 +1,10 @@
 package com.leonardo.orgsync.orgsync.domain.entities.user;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.leonardo.orgsync.orgsync.domain.entities.department.Department;
-import com.leonardo.orgsync.orgsync.presentation.dtos.LoginRequest;
+import com.leonardo.orgsync.orgsync.presentation.dtos.auth.LoginRequest;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,6 +18,7 @@ import java.util.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class UserEntity {
 
     @Id
@@ -27,6 +31,7 @@ public class UserEntity {
     @Column(nullable = false, unique=true)
     private String email;
     @Column(nullable = false)
+    @JsonIgnore
     private String password;
 
     @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
@@ -42,7 +47,8 @@ public class UserEntity {
     private boolean enabled;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id", nullable = false)
+    @JoinColumn(name = "department_id")
+    @JsonBackReference
     private Department department;
 
 
