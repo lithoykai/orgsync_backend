@@ -43,7 +43,18 @@ Front-end: https://github.com/lithoykai/orgsync_frontend
 git clone https://github.com/lithoykai/orgsync_backend.git
 ```
 
-2. Configure as variáveis de ambiente no arquivo `application.properties` e caso for rodar no Docker, alterar as variveis lá:
+2. Gere seu par de chaves RSA com o OpenSSL.
+
+```bash
+openssl genpkey -algorithm RSA -out app.key -pkeyopt rsa_keygen_bits:2048
+
+openssl rsa -pubout -in app.key -out app.pub
+
+```
+
+Após rodar, coloque os arquivos na pasta `src/main/resources/`
+
+3. Configure as variáveis de ambiente no arquivo `application.properties` e caso for rodar no Docker, alterar as variveis lá:
 ```properties
 jwt.public.key=classpath:certs/public.pem
 jwt.private.key=classpath:certs/private.pem
@@ -51,7 +62,7 @@ orgsync.default.email=[email-admin]
 orgsync.default.password=[senha-admin]
 ```
 
-3. Execute o projeto:
+4. Execute o projeto:
 ```bash
 mvn spring-boot:run
 ```
@@ -60,7 +71,7 @@ O servidor estará disponível em `http://localhost:8080`
 
 ### Frontend
 
-1. Navegue até a pasta do frontend:
+1. Navegue até a pasta do frontend (caso tenha baixado):
 ```bash
 cd frontend
 ```
