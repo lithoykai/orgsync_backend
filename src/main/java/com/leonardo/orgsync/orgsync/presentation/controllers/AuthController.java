@@ -8,6 +8,7 @@ import com.leonardo.orgsync.orgsync.domain.services.UserService;
 import com.leonardo.orgsync.orgsync.presentation.dtos.auth.LoginRequest;
 import com.leonardo.orgsync.orgsync.presentation.dtos.auth.LoginResponse;
 import com.leonardo.orgsync.orgsync.presentation.dtos.auth.RegisterDTO;
+import com.leonardo.orgsync.orgsync.presentation.dtos.department.DepartmentResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -53,10 +54,9 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "Credenciais inválidas", content = @Content)
     })
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) throws Exception {
-        //TODO: service, not repository
         var user = service.findUserByEmail(loginRequest.email());
 
-        if(user.isEmpty() || !user.get().isCorretLogin(loginRequest, encoder)) throw new BadCredentialsException("User or password is invalid");
+        if(user.isEmpty() || !user.get().isCorretLogin(loginRequest, encoder)) throw new BadCredentialsException("Email ou senha inválidos.");
         var now = Instant.now();
         var expiresIn = 7200L; //2hours
 
@@ -71,9 +71,12 @@ public class AuthController {
                 .build();
 
         var jwtValue = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+        var department = departmentService.findById(user.get().getDepartment().getId());
+
 
         return ResponseEntity.ok(new LoginResponse(jwtValue, expiresIn));
     }
+
 
     @PostMapping("/register")
     @Operation(summary = "Registrar um novo usuário", description = "Cria um novo usuário no sistema e o associa ao departamento padrão 'Sem Departamento'.")

@@ -94,7 +94,7 @@ public class DeparmentController {
         return ResponseEntity.ok(updatedDepartment);
     }
 
-    @DeleteMapping("/{id}")
+        @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     @Transactional
     @Operation(summary = "Deletar um departamento", description = "Remove um departamento do sistema. Apenas administradores podem executar esta ação.")
@@ -106,6 +106,20 @@ public class DeparmentController {
     public ResponseEntity deleteDepartment(@PathVariable Long id){
         departmentService.deleteDepartment(id);
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/remove/{id}")
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
+    @Transactional
+    @Operation(summary = "Remove usuários de um departamento", description = "Remove os usuários de um departamento e os colocam no departamento padrão 'Sem departamento'")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Usuários removidos do departamento com sucesso"),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Departamento não encontrado", content = @Content)
+    })
+    public ResponseEntity<DepartmentResponse> removeUserDepartment(@PathVariable Long id, @RequestBody UserDepartment users){
+        var response = departmentService.moveUsersToDefaultDepartment(id, users.users());
+        return ResponseEntity.ok(response);
     }
 
 }

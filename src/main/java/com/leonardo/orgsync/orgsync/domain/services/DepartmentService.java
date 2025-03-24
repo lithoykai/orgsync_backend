@@ -36,20 +36,44 @@ public class DepartmentService {
 
     public Optional<Department> findById(Long id) throws EntityNotFoundException {
         Optional<Department> department = repository.findById(id);
-        if(department.isEmpty()) throw new EntityNotFoundException("Department not found");
+        if(department.isEmpty()) throw new EntityNotFoundException("Departamento não encontrado.");
         return department;
     }
-    public void createDepartment(DepartmentRequest request){
+    public void createDepartment(DepartmentRequest request) {
+        Set<UserEntity> users = new HashSet<>();
+
+        if (request.users() != null && !request.users().isEmpty()) {
+            users = request.users().stream()
+                    .map(userRepository::findById)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .collect(Collectors.toSet());
+        }
         Department department = new Department();
-        department.setDescription(request.description());
+        department.setId(null);
         department.setName(request.name());
-        department.setUsers(Set.of());
+        department.setDescription(request.description());
         department.setEnabled(request.enabled());
-        repository.save(department);
+        if (request.users() != null && !request.users().isEmpty()) {
+            department.setUsers(users);
+            userRepository.saveAll(users);
+        }
+
+        Department createdDepartment = repository.save(department);
+        if (request.users() != null && !request.users().isEmpty()) users.forEach(user -> user.setDepartment(repository.save(createdDepartment)));
     }
 
+
     public List<DepartmentResponse> getAllDepartments(){
-        return repository.findAll().stream().map(department -> new DepartmentResponse(department.getId(), department.getName(), department.getDescription(), department.getUsers())).collect(Collectors.toList());
+        return repository.findAll()
+                .stream()
+                .map(
+                        department -> new DepartmentResponse(
+                                department.getId(),
+                                department.getName(),
+                                department.getDescription(),
+                                department.getUsers()
+                        )).collect(Collectors.toList());
     }
 
     public DepartmentResponse getDepartmentById(Long id){
@@ -60,11 +84,15 @@ public class DepartmentService {
     public DepartmentResponse updateDepartment(DepartmentRequest request, Long id){
         Department department = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Department not found"));
-
+        Set<UserEntity> users = new HashSet<>(userRepository.findAllById(request.users()));
         department.setName(request.name());
         department.setDescription(request.description());
         department.setEnabled(request.enabled());
-
+        department.setUsers(users);
+        for (UserEntity user : users) {
+                user.setDepartment(department);
+                userRepository.save(user);
+        }
         repository.save(department);
         return new DepartmentResponse(
                 department.getId(),
@@ -92,7 +120,39 @@ public class DepartmentService {
         return createResponse(department);
     }
 
-    public void deleteDepartment(Long id){
+    public void deleteDepartment(Long id) {
+        Department sourceDepartment = repository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Departamento não encontrado."));
+
+        if (!sourceDepartment.getUsers().isEmpty()) {
+            moveUsersToDefaultDepartment(id, sourceDepartment.getUsers().stream().map(UserEntity::getId).collect(Collectors.toSet()));
+
+        }
+        sourceDepartment.getUsers().clear();
+        repository.save(sourceDepartment);
+        repository.delete(sourceDepartment);
         repository.deleteById(id);
     }
+
+    public DepartmentResponse moveUsersToDefaultDepartment(Long departmentID, Set<UUID> userIds) {
+        Department sourceDepartment = repository.findById(departmentID)
+                .orElseThrow(() -> new EntityNotFoundException("Departamento não encontrado."));
+
+        Department defaultDepartment = repository.findById(2L)
+                .orElseThrow(() -> new EntityNotFoundException("Departamento padrão (ID 2) não encontrado."));
+
+        Set<UserEntity> users = new HashSet<>(userRepository.findAllById(userIds));
+
+        if (users.isEmpty()) throw new EntityNotFoundException("Usuários não encontrados.");
+
+        for (UserEntity user : users) {
+            if (sourceDepartment.getUsers().contains(user)) {
+                user.setDepartment(defaultDepartment);
+            }
+        }
+
+        userRepository.saveAll(users);
+        return createResponse(sourceDepartment);
+    }
+
 }

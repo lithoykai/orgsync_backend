@@ -50,6 +50,10 @@ public class UserService {
         return users;
     }
 
+    public UserEntity getUserByID(UUID id) {
+        return userRepository.findById(id).orElse(null);
+    }
+
     public List<UserResponse> getUsersByDeparment(Long id) {
         List<UserResponse> users = (List<UserResponse>) userRepository.findByDepartmentId(id)
                 .stream()
@@ -61,7 +65,7 @@ public class UserService {
 
     public void deleteUser(UUID userId) {
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
 
         user.getRoles().clear();
         userRepository.save(user);

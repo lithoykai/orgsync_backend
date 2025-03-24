@@ -10,3 +10,4 @@ VALUES
     (1, 'Administrativo', 'Departamento responsável pela administração geral', TRUE),
     (2, 'Sem Departamento', 'Usuários que ainda não pertencem a um departamento específico', TRUE)
     ON CONFLICT (id) DO NOTHING;
+SELECT setval('tb_departments_id_seq', (SELECT MAX(id) FROM tb_departments) + 1);
